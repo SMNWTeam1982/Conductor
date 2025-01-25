@@ -17,7 +17,15 @@ Before building, ensure that you have the following dependencies installed:
 ## Ubuntu
 ```bash
 # Dependencies
-sudo apt-get install -y libudev-dev libx11-dev libxi-dev libpango1.0-dev libatk1.0-dev libsoup2.4-dev libgtk-3-dev libwebkit2gtk-4.1-dev
+# Temporary fix for libwebkit2gtk-4.0-dev
+sudo sh -c 'echo "deb http://gb.archive.ubuntu.com/ubuntu jammy main" >> /etc/apt/sources.list'
+sudo apt-get update
+sudo apt-get install -y libwebkit2gtk-4.0-dev
+sudo sed -i '/deb http:\/\/gb.archive.ubuntu.com\/ubuntu jammy main/d' /etc/apt/sources.list
+sudo apt-get update
+
+# Other dependencies
+sudo apt-get install -y nodejs libudev-dev libx11-dev libxi-dev libpango1.0-dev libatk1.0-dev libsoup2.4-dev libgtk-3-devx
 
 # Node Version Manager
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
