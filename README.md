@@ -17,7 +17,7 @@ Before building, ensure that you have the following dependencies installed:
 ## Ubuntu
 ```bash
 # Dependencies
-sudo apt-get install -y libudev-dev libx11-dev libxi-dev libpango1.0-dev libatk1.0-dev libsoup2.4-dev libgtk-3-dev libwebkit2gtk-4.0-dev
+sudo apt-get install -y libudev-dev libx11-dev libxi-dev libpango1.0-dev libatk1.0-dev libsoup2.4-dev libgtk-3-dev libwebkit2gtk-4.1-dev
 
 # Node Version Manager
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
