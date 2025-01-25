@@ -11,21 +11,21 @@ Conductor is a Driver Station for FRC robots for Linux and macOS which supports 
 Before building, ensure that you have the following dependencies installed:
 
 - A Rust toolchain (e.g. installed via [Rustup](https://rustup.rs))
-- [NodeJS](https://nodejs.org) with NPM
+- [NodeJS](https://nodejs.org) version 18 with NPM
 - [WebKitGTK](https://webkitgtk.org/)  
 
 ## Ubuntu
-```
+```bash
 # Dependencies
-sudo apt-get install -y nodejs libudev-dev libx11-dev libxi-dev libpango1.0-dev libatk1.0-dev libsoup2.4-dev libgtk-3-dev libwebkit2gtk-4.0-dev
+sudo apt-get install -y libudev-dev libx11-dev libxi-dev libpango1.0-dev libatk1.0-dev libsoup2.4-dev libgtk-3-dev libwebkit2gtk-4.0-dev
 
 # Node Version Manager
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-nvm install 14
-nvm use 14
+nvm install 18
+nvm use 18
 
 # Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -38,7 +38,7 @@ make setup && make release
 ```  
   
 ## Mac
-```
+```bash
 # Homebrew Install
 xcode-select --install
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -49,8 +49,8 @@ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-nvm install 14
-nvm use 14
+nvm install 18
+nvm use 18
 
 # Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh

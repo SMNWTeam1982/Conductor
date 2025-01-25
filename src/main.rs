@@ -28,7 +28,11 @@ const PERCENT_HEIGHT: f64 = 0.42;
 fn main() -> WVResult {
     env_logger::init();
     let mut cfg = confy::load::<Config>("conductor").unwrap();
-    // std::panic::set_hook(Box::new(panic_dialog_creator));
+
+    if let Ok(ci) = std::env::var("CI") {
+        cfg.ci = ci.parse().unwrap_or(false);
+    }
+
     match std::env::var("RUST_BACKTRACE") {
         Err(_) => {
             std::panic::set_hook(Box::new(panic::hook));
