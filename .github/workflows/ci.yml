@@ -42,7 +42,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
+          sudo apt-get install -y --no-install-recommends \
             nodejs \
             libudev-dev \
             libx11-dev \
@@ -51,7 +51,7 @@ jobs:
             libatk1.0-dev \
             libsoup-3.0-dev \
             libgtk-3-dev \
-            libwebkit2gtk-4.1-dev
+            libwebkit2gtk-4.0-dev
           
       - name: Install macOS Dependencies  
         if: runner.os == 'macOS'
