@@ -1,3 +1,4 @@
+NODE_OPTIONS="--openssl-legacy-provider"
 
 .PHONY: main
 
@@ -26,8 +27,10 @@ frontend:
 		&& npm run build
 
 release:
+	export NODE_OPTIONS=$(NODE_OPTIONS)
+
 	cd ui/main-window \
 	    && npm run build:react
 	cd ui/stdout \
 	    && npm run build
-	cargo build --release
+	cargo bundle --release

@@ -9,7 +9,8 @@ license-file = "LICENSE"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-web-view = { git = "https://github.com/Boscop/web-view#82d7cbc.git" }
+# Best current fork of web-view with latest Mac OS Support, as this is intended to target our school MacBooks
+web-view = { git = "https://github.com/passy/web-view#aead339.git"}
 lazy_static = "1.4.0"
 rust-embed = "5.5.1"
 serde = { version = "1.0.106", features = ["derive"] }
@@ -45,9 +46,13 @@ block = "0.1.6"
 core-foundation = "0.9.0"
 
 [package.metadata.bundle]
-name = "Conductor"
+name = "Conductor DS"
 identifier = "io.github.Redrield.Conductor"
 copyright = "MPL-2"
+resources = ["images/icons/*.png"]
+icon= ["images/icons/Conductor32x32.png", "images/icons/Conductor64x64.png", "images/icons/Conductor128x128.png", "images/icons/Conductor512x512.png", "images/icons/Conductor.icns", "images/icons/Conductor.svg"]
+category = "Developer Tool"
+short_description = "Conductor is an Open Source FRC Driver Station implementation"
 
 [package.metadata.rpm]
 package = "conductor"

@@ -5,3 +5,6 @@
 **/stdout.js
 *.log
 .idea
+
+dist/
+.DS_Store
