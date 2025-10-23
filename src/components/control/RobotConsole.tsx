@@ -1,118 +1,98 @@
-import { type DriverStationState, ErrorExplanation } from "@lib/store";
-import { connect, type ConnectedProps } from "react-redux";
 import React from "react";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { listen } from "@tauri-apps/api/event";
-import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { ConsoleMessageType, ConsoleOutput } from "@lib/ipc-new";
+import { consoleItemStyle, mainConsoleStyle, windowedConsoleStyle } from "@lib/styles";
 
-const mapState = (state: DriverStationState) => ({
-    messages: state.stdout,
-    enabled: state.enabled,
-    explanation: state.explanation
-});
 
-const mapDispatch = ({});
-
-const connector = connect(mapState, mapDispatch);
-
-type Props = ConnectedProps<typeof connector>;
-
-const COMMS_ERROR = ["The robot controller and driver station are not able to communicate."];
-
-const CODE_ERROR =
-    ["There is no user code running on the robot.",
-        "1. Code may be crashing on startup, check robot console for potential error.",
-        "2. There may be no code downloaded. Deploy your code to the robot."
-    ];
-
-const JOYSTICK_ERROR =
-    ["No joysticks were identified",
-        "1. Ensure they are plugged in",
-        "2. Disconnect and reconnect the joysticks"
-    ]
-
-const stdoutStyle = {
-    width: "330px",
-    height: "200px",
-    color: "#fff"
+type ComponentProps = {
+    window: "main" | "console";
+    enabled: boolean | null;
 }
 
-const itemStyle = {
-    minHeight: "20px"
-};
+type ComponentState = {
+    messages: string[];
+    consoleOutput: ConsoleOutput;
+    windowSize: {
+        width: number;
+        height: number
+    } | null
+}
 
-class RobotConsole extends React.Component<Props, any> {
+class RobotConsole extends React.Component<ComponentProps, ComponentState> {
     private readonly listRef = React.createRef<HTMLDivElement>();
-
-    constructor(props: Props) {
+    constructor(props: any) {
         super(props);
 
         this.listRef = React.createRef();
+        this.state = { messages: [], consoleOutput: { messageContent: "", messageType: ConsoleMessageType.NO_OUTPUT, messageName: "NO_OUTPUT", clearConsole: false }, windowSize: null }
     }
 
     async componentDidMount(): Promise<void> {
-        await invoke("start_stdout")
-        listen<string>("sdout-message", (event) => {
-            console.log(event)
-        })
+        if (this.props.window == "main") {
+            await listen<ConsoleOutput>("stdout-message", async (event) => {
+                let latestOutput = event.payload;
+                let currentMessages = this.state.messages;
+                if (latestOutput.clearConsole) currentMessages = [];
+                if (typeof latestOutput.messageContent === "string" && latestOutput.messageContent !== "") currentMessages.push(latestOutput.messageContent);
+                if (Array.isArray(latestOutput.messageContent)) currentMessages = currentMessages.concat(latestOutput.messageContent);
+                this.setState({ messages: currentMessages, consoleOutput: latestOutput })
+            })
+        }
+        if (this.props.window == "console") {
+            const appWindow = getCurrentWindow();
+            let size = (await appWindow.innerSize()).toLogical(await appWindow.scaleFactor());
+            this.setState({ windowSize: { height: size.height, width: size.width } })
+            await listen("tauri://resize", async () => {
+                let size = (await appWindow.innerSize()).toLogical(await appWindow.scaleFactor());
+                this.setState({ windowSize: { height: size.height, width: size.width } })
+            })
+            await listen<ConsoleOutput>("stdout-message", async (event) => {
+                let latestOutput = event.payload;
+                let lastOutput = this.state.consoleOutput;
+                let currentMessages = this.state.messages;
+                if (latestOutput.clearConsole == true) {
+                    switch (latestOutput.messageType) {
+                        case ConsoleMessageType.COMMS_ERROR: break;
+                        case ConsoleMessageType.CODE_ERROR: break;
+                        case ConsoleMessageType.JOYSTICK_ERROR: break;
+                        case ConsoleMessageType.CLEAR_CONSOLE: {
+                            if (lastOutput.messageType == ConsoleMessageType.SIMULATION_MESSAGE) {
+                                currentMessages = [];
+                            }
+                            break;
+                        }
+                        default: currentMessages = [];
+                    }
+                }
+                if (typeof latestOutput.messageContent === "string" && latestOutput.messageContent !== "") currentMessages.push(latestOutput.messageContent);
+                this.setState({ messages: currentMessages, consoleOutput: latestOutput, })
+            })
+        }
     }
 
     componentDidUpdate() {
-        if (this.props.enabled) {
-            let node = this.listRef.current;
-            if (node) {
-                node.scrollIntoView({ behavior: "auto" });
-            }
+        let node = this.listRef.current;
+        if (node) {
+            node.scrollIntoView({ behavior: "auto" });
         }
-    }
-
-    describeError() {
-        let err = this.props.explanation;
-
-        let data;
-        switch (err) {
-            case ErrorExplanation.Comms:
-                data = COMMS_ERROR;
-                break;
-            case ErrorExplanation.Code:
-                data = CODE_ERROR;
-                break;
-            case ErrorExplanation.Joysticks:
-                data = JOYSTICK_ERROR;
-                break;
-        }
-
-        // data will always be initialized here but typescript isn't smart enough to realize
-        // @ts-ignore
-        let items = data.map(msg => (
-            <div style={itemStyle}>{msg}</div>
-        ));
-        // @ts-ignore
-        let len: number = data.length;
-
-        return (
-            <InfiniteScroll next={() => {}} hasMore={false} loader={""} dataLength={len}
-                style={stdoutStyle} className="form-control bg-secondary mt-4">
-                {items}
-            </InfiniteScroll>
-        )
     }
 
     render() {
-        if (this.props.explanation != null) {
-            return this.describeError();
-        } else {
+        const items = this.state.messages.map((message, index) => {
             return (
-                <InfiniteScroll next={() => {}} hasMore={false} loader={""} dataLength={this.props.messages.length}
-                    style={stdoutStyle} className="form-control bg-secondary mt-4">
-                    {this.props.messages.map(msg => (
-                        <div style={itemStyle}>{msg}</div>
-                    ))}
-                    <div ref={this.listRef} />
-                </InfiniteScroll>
+                <div style={consoleItemStyle} className="console" key={index}>{message}</div>
             )
-        }
+        });
+        return (
+            <InfiniteScroll next={() => { }} hasMore={false} loader={""} dataLength={items.length}
+                style={this.props.window == 'main' ? mainConsoleStyle : windowedConsoleStyle(this.state.windowSize)} className="form-control bg-secondary">
+                {items}
+                <div ref={this.listRef} key={-1}></div>
+            </InfiniteScroll>
+        )
     }
 }
 
-export default connector(RobotConsole);
+export default RobotConsole;

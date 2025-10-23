@@ -1,70 +1,61 @@
 import React from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-import { unregisterAll } from "@tauri-apps/plugin-global-shortcut";
-import { ActivePage } from "@lib/store";
-import ControlPage from "@components/pages/ControlPage";
+import { ActivePage } from "@lib/ipc-new";
+import OverviewPage from "@components/pages/OverviewPage";
 import SettingsPage from "@components/pages/SettingsPage";
-import JoysticksPage from "@components/pages/JoysticksPage";
+import InputPage from "@components/pages/InputPage";
 
 type AppState = {
   activePage: ActivePage | null;
 }
 
-const setActivePage = async (page: ActivePage) => {
-  await invoke('set_active_page', { page });
-};
-
 class App extends React.Component<any, AppState> {
   constructor(props: any) {
     super(props);
-    this.state = {
-      activePage: ActivePage.Control,
-    }
+    this.state = { activePage: null }
   }
+  async setActivePage(page: ActivePage) {
+    this.setState({ activePage: page })
+    await invoke('set_active_page', { page });
+  };
 
   async componentDidMount(): Promise<void> {
-    listen<number>('current-page', (event) => {
-      this.setState({ activePage: event.payload })
-    })
-  }
-
-  async componentWillUnmount(): Promise<void> {
-    await unregisterAll();
+    let activePage = await invoke<number>("get_active_page");
+    this.setState({ activePage })
   }
 
   render(): React.ReactNode {
     let body;
     switch (this.state.activePage) {
-      case ActivePage.Control:
-        body = (<ControlPage />);
+      case ActivePage.Overview:
+        body = (<OverviewPage />);
         break;
-      case ActivePage.Config:
+      case ActivePage.Settings:
         body = (<SettingsPage />);
         break;
-      case ActivePage.Joysticks:
-        body = (<JoysticksPage />);
+      case ActivePage.Input:
+        body = (<InputPage />);
         break;
       default:
         body = (<>Undefined Page</>);
         break;
     }
     return (<>
-      <ul className="nav nav-tabs user-select-none">
+      <ul className="nav nav-tabs">
         <li className="nav-item">
           <a href="#"
-            className={`nav-link ${this.state.activePage == ActivePage.Control ? "active" : "text-light"}`}
-            onClick={() => setActivePage(ActivePage.Control)}>Control</a>
+            className={`nav-link ${this.state.activePage == ActivePage.Overview ? "active" : "text-light"}`}
+            onClick={async () => { this.setState({ activePage: ActivePage.Overview }); await invoke('set_active_page', { page: ActivePage.Overview }) }}>Overview</a>
         </li>
         <li className="nav-item">
           <a href="#"
-            className={`nav-link ${this.state.activePage == ActivePage.Config ? "active" : "text-light"}`}
-            onClick={() => setActivePage(ActivePage.Config)}>Config</a>
+            className={`nav-link ${this.state.activePage == ActivePage.Settings ? "active" : "text-light"}`}
+            onClick={async () => { this.setState({ activePage: ActivePage.Settings }); await invoke('set_active_page', { page: ActivePage.Settings }) }}>Settings</a>
         </li>
         <li className="nav-item">
           <a href="#"
-            className={`nav-link ${this.state.activePage == ActivePage.Joysticks ? "active" : "text-light"}`}
-            onClick={() => setActivePage(ActivePage.Joysticks)}>Joysticks</a>
+            className={`nav-link ${this.state.activePage == ActivePage.Input ? "active" : "text-light"}`}
+            onClick={async () => { this.setState({ activePage: ActivePage.Input }); await invoke('set_active_page', { page: ActivePage.Input }) }}>Input</a>
         </li>
       </ul>
       {body}

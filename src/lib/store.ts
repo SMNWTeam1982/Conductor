@@ -1,6 +1,5 @@
 import {
     CAPABILITIES,
-    ESTOP_ROBOT,
     ESTOP_STATUS,
     JOYSTICK_UPDATE,
     type Message,
@@ -8,9 +7,7 @@ import {
     QUERY_ESTOP,
     REQUEST,
     ROBOT_STATE_UPDATE,
-    UPDATE_ENABLE_STATUS,
     UPDATE_GSM,
-    UPDATE_JOYSTICK_MAPPING,
     UPDATE_TEAM_NUMBER,
     UPDATE_USB_STATUS
 } from "./ipc";

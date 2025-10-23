@@ -6,9 +6,8 @@
     "linux"
   ],
   "windows": [
-    "main"
+    "main",
+    "console"
   ],
-  "permissions": [
-    "global-shortcut:default"
-  ]
+  "permissions": []
 }

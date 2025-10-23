@@ -18,7 +18,7 @@ const connector = connect(mapState, mapDispatch);
 
 type Props = ConnectedProps<typeof connector>;
 
-class JoysticksPage extends React.Component<Props, any> {
+class InputPage extends React.Component<Props, any> {
     constructor(props: Props) {
         super(props)
         this.onDragEnd = this.onDragEnd.bind(this)
@@ -57,4 +57,4 @@ class JoysticksPage extends React.Component<Props, any> {
     }
 }
 
-export default connector(JoysticksPage)
+export default connector(InputPage)

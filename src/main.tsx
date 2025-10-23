@@ -8,16 +8,28 @@ import { initState, rootReducer } from '@lib/store.ts'
 
 import App from './App.tsx'
 import './index.scss'
+import RobotConsole from '@components/control/RobotConsole.tsx';
 
 const globalStore = configureStore({
   reducer: rootReducer,
   preloadedState: initState(),
 })
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <Provider store={globalStore}>
-      <App />
-    </Provider>
-  </StrictMode>,
-)
+if (window.location.hash == "#console") {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <div className="d-flex justify-content-center align-items-center min-vh-100">
+        <RobotConsole window='console' enabled={true} />
+      </div>
+    </StrictMode>,
+  )
+}
+else {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <Provider store={globalStore}>
+        <App />
+      </Provider>
+    </StrictMode>,
+  )
+}
