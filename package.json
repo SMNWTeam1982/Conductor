@@ -14,6 +14,7 @@
     "@hello-pangea/dnd": "^18.0.1",
     "@popperjs/core": "^2.11.8",
     "@reduxjs/toolkit": "^2.9.0",
+    "@svgr/plugin-jsx": "^8.1.0",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-global-shortcut": "~2",
     "@tauri-apps/plugin-opener": "^2",
@@ -25,9 +26,11 @@
     "react-beautiful-dnd": "^13.1.1",
     "react-dom": "^19.1.0",
     "react-infinite-scroll-component": "^6.1.0",
+    "react-joystick-component": "^6.2.1",
     "react-redux": "^9.2.0",
     "redux": "^5.0.1",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "vite-plugin-svgr": "^4.5.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.37.0",

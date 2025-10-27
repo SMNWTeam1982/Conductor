@@ -1,10 +1,10 @@
 use ds::{Alliance, DriverStation, Mode};
+use gilrs::{GamepadId, Gilrs};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use gilrs::{Gilrs, GamepadId};
+use tauri::App;
+use tauri_plugin_store::StoreExt;
 use uuid::Uuid;
-
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ActivePage {
@@ -30,7 +30,7 @@ impl AppState {
 pub enum ConsoleMessage {
     Singular(String),
     Multiple(Vec<String>),
-    None
+    None,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -44,9 +44,8 @@ pub enum ConsoleMessageType {
     CodeError,
     JoystickError,
     RestartCode,
-    RestartRobot
+    RestartRobot,
 }
-
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -59,17 +58,17 @@ pub struct ConsoleOutput {
 
 impl ConsoleOutput {
     pub fn new(message: ConsoleMessage, message_type: u32) -> Self {
-        let (returned_type, clear ) = match message_type {
-            0 => ( ConsoleMessageType::NoOutput, false),
-            1 => ( ConsoleMessageType::ClearConsole, true),
-            2 => ( ConsoleMessageType::SimulationMessage, true),
-            3 => ( ConsoleMessageType::ConsoleMessage, false),
-            4 => ( ConsoleMessageType::CommsError, true),
-            5 => ( ConsoleMessageType::CodeError, true),
-            6 => ( ConsoleMessageType::JoystickError, true),
-            7 => ( ConsoleMessageType::RestartCode, false),
+        let (returned_type, clear) = match message_type {
+            0 => (ConsoleMessageType::NoOutput, false),
+            1 => (ConsoleMessageType::ClearConsole, true),
+            2 => (ConsoleMessageType::SimulationMessage, true),
+            3 => (ConsoleMessageType::ConsoleMessage, false),
+            4 => (ConsoleMessageType::CommsError, true),
+            5 => (ConsoleMessageType::CodeError, true),
+            6 => (ConsoleMessageType::JoystickError, true),
+            7 => (ConsoleMessageType::RestartCode, false),
             8 => (ConsoleMessageType::RestartRobot, false),
-            9_u32..=u32::MAX => (ConsoleMessageType::NoOutput, false)
+            9_u32..=u32::MAX => (ConsoleMessageType::NoOutput, false),
         };
         ConsoleOutput {
             message_content: message,
@@ -92,8 +91,18 @@ pub struct DriverStationState {
 }
 
 impl DriverStationState {
-    pub fn new() -> Self {
-        let ds = DriverStation::new("", Alliance::new_red(1), 0);
+    pub fn new(app: &mut App) -> Self {
+        let store = app.store("settings.json").unwrap();
+        let team_number = store
+            .get("teamNumber")
+            .and_then(|v| v.as_u64())
+            .map(|v| v as u32)
+            .unwrap_or(0);
+        let ds = if team_number == 0 {
+            DriverStation::new("", Alliance::new_red(1), 0)
+        } else {
+            DriverStation::new_team(team_number, Alliance::new_red(1))
+        };
         DriverStationState {
             ds,
             mode: Mode::Autonomous,
@@ -102,7 +111,7 @@ impl DriverStationState {
             has_joysticks: false,
             last_output: ConsoleOutput::new(ConsoleMessage::Singular(String::new()), 1),
             use_usb: false,
-            team_number: 0,
+            team_number: team_number,
         }
     }
 }
@@ -135,69 +144,69 @@ impl JoystickState {
         }
     }
 }
-    // pub fn update(&mut self) {
-    //     self.gil.next_event();
+// pub fn update(&mut self) {
+//     self.gil.next_event();
 
-    //     let new_gamepads = self
-    //         .gil
-    //         .gamepads()
-    //         .any(|(id, _)| !self.gamepads.iter().any(|gp| gp.gid == id));
-    //     let removed_gamepads = self
-    //         .gamepads
-    //         .iter()
-    //         .any(|gp| !self.gil.gamepad(gp.gid).is_connected());
+//     let new_gamepads = self
+//         .gil
+//         .gamepads()
+//         .any(|(id, _)| !self.gamepads.iter().any(|gp| gp.gid == id));
+//     let removed_gamepads = self
+//         .gamepads
+//         .iter()
+//         .any(|gp| !self.gil.gamepad(gp.gid).is_connected());
 
-    //     if new_gamepads {
-    //         let gp = self.gamepads.clone();
-    //         for (id, gp) in self
-    //             .gil
-    //             .gamepads()
-    //             .filter(|(id, _)| !gp.iter().any(|gp| gp.gid == *id))
-    //         {
-    //             let gamepad_id = Uuid::new_v4();
-    //             let msg = JoystickUpdate {
-    //                 removed: false,
-    //                 name: gp.name().to_string(),
-    //                 uuid: gamepad_id.to_string(),
-    //             };
-    //             // self.addr.do_send(msg);
-    //             let data = GamepadData {
-    //                 assigned_id: gamepad_id,
-    //                 gid: id,
-    //                 name: gp.name().to_string(),
-    //             };
-    //             self.gamepads.push(data);
-    //         }
-    //     }
+//     if new_gamepads {
+//         let gp = self.gamepads.clone();
+//         for (id, gp) in self
+//             .gil
+//             .gamepads()
+//             .filter(|(id, _)| !gp.iter().any(|gp| gp.gid == *id))
+//         {
+//             let gamepad_id = Uuid::new_v4();
+//             let msg = JoystickUpdate {
+//                 removed: false,
+//                 name: gp.name().to_string(),
+//                 uuid: gamepad_id.to_string(),
+//             };
+//             // self.addr.do_send(msg);
+//             let data = GamepadData {
+//                 assigned_id: gamepad_id,
+//                 gid: id,
+//                 name: gp.name().to_string(),
+//             };
+//             self.gamepads.push(data);
+//         }
+//     }
 
-    //     if removed_gamepads {
-    //         for (i, gp) in self.gamepads.clone().into_iter().enumerate() {
-    //             if self.gil.gamepad(gp.gid).is_connected() {
-    //                 continue;
-    //             }
-    //             self.gamepads.remove(i);
-    //             let msg = JoystickUpdate {
-    //                 removed: true,
-    //                 uuid: gp.assigned_id.to_string(),
-    //                 name: gp.name,
-    //             };
-    //             // self.addr.do_send(msg);
-    //         }
-    //         self.apply_joystick_safety();
-    //     }
-    // }
+//     if removed_gamepads {
+//         for (i, gp) in self.gamepads.clone().into_iter().enumerate() {
+//             if self.gil.gamepad(gp.gid).is_connected() {
+//                 continue;
+//             }
+//             self.gamepads.remove(i);
+//             let msg = JoystickUpdate {
+//                 removed: true,
+//                 uuid: gp.assigned_id.to_string(),
+//                 name: gp.name,
+//             };
+//             // self.addr.do_send(msg);
+//         }
+//         self.apply_joystick_safety();
+//     }
+// }
 
-    // fn apply_joystick_safety(&self) {
-    //     // let msg = UpdateEnableStatus {
-    //     //     enabled: false,
-    //     //     from_backend: true,
-    //     // };
-    //     // self.addr.do_send(msg);
-    // }
+// fn apply_joystick_safety(&self) {
+//     // let msg = UpdateEnableStatus {
+//     //     enabled: false,
+//     //     from_backend: true,
+//     // };
+//     // self.addr.do_send(msg);
+// }
 
-    // fn map_gid(&self, id: GamepadId) -> Option<Uuid> {
-    //     self.gamepads
-    //         .iter()
-    //         .find(|gp| gp.gid == id)
-    //         .map(|gp| gp.assigned_id)
-    // }
+// fn map_gid(&self, id: GamepadId) -> Option<Uuid> {
+//     self.gamepads
+//         .iter()
+//         .find(|gp| gp.gid == id)
+//         .map(|gp| gp.assigned_id)
+// }

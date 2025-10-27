@@ -3,6 +3,7 @@ use ds::{Alliance, DriverStation, DsMode, Mode, TcpPacket};
 use serde_json::{json, Value};
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, State};
+use tauri_plugin_store::StoreExt;
 
 #[tauri::command]
 pub fn set_active_page(state: State<Mutex<ipc::AppState>>, page: u32) {
@@ -51,11 +52,18 @@ pub fn estop(app: AppHandle, state: State<Mutex<ipc::DriverStationState>>) {
     }
 }
 #[tauri::command]
-pub fn update_team_number(state: State<Mutex<ipc::DriverStationState>>, team_number: u32) {
+pub fn update_team_number(
+    app: AppHandle,
+    state: State<Mutex<ipc::DriverStationState>>,
+    team_number: u32,
+) {
     let mut app_state = state.lock().unwrap();
+    let store = app.store("settings.json").unwrap();
     if app_state.team_number != team_number {
+        store.set("teamNumber", team_number);
         app_state.team_number = team_number;
         app_state.ds = DriverStation::new_team(team_number, app_state.alliance);
+        store.save().unwrap();
     }
 }
 
@@ -98,7 +106,7 @@ pub fn restart_code(state: State<Mutex<ipc::DriverStationState>>) {
 }
 
 #[tauri::command]
-pub fn restart_controller(state: State<Mutex<ipc::DriverStationState>>) {
+pub fn restart_roborio(state: State<Mutex<ipc::DriverStationState>>) {
     let mut app_state = state.lock().unwrap();
     app_state.ds.restart_roborio();
 }
@@ -186,7 +194,7 @@ pub fn manage_console(
         9_u32..=u32::MAX => ipc::ConsoleMessage::Singular("Invalid manage_console call from frontend. Please call with a valid ConsoleMessageType.".to_string()),
     };
     app.emit(
-        "stdout-message",
+        "console-message",
         ipc::ConsoleOutput::new(console_message.clone(), message_type),
     )
     .unwrap();
@@ -194,7 +202,7 @@ pub fn manage_console(
     app_state.ds.set_tcp_consumer(move |packet| match packet {
         TcpPacket::Stdout(stdout) => {
             app.emit(
-                "stdout-message",
+                "console-message",
                 ipc::ConsoleOutput::new(ipc::ConsoleMessage::Singular(stdout.message), 3),
             )
             .unwrap();

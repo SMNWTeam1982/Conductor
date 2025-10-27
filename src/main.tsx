@@ -8,7 +8,7 @@ import { initState, rootReducer } from '@lib/store.ts'
 
 import App from './App.tsx'
 import './index.scss'
-import RobotConsole from '@components/control/RobotConsole.tsx';
+import RobotConsole from '@components/overview/RobotConsole.tsx';
 
 const globalStore = configureStore({
   reducer: rootReducer,

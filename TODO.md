@@ -1,3 +1,5 @@
-1. See if macOS can handle a second webview in the app
-2. use log crate instead of a bunch of printlns for logging
-3. set up enable hotkey on :b:acOS
+1. Fix crash when connected to robot on WiFi (macOS only? )
+1. Implement input device support via gilrs
+2. Add Input tester function for input devices
+3. Refine UI styling
+4. Fix issues with robot connection without network.

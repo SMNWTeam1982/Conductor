@@ -1,12 +1,18 @@
 import { defineConfig } from "vite";
 import { resolve } from 'path'
+import svgr from 'vite-plugin-svgr'
 import react from "@vitejs/plugin-react";
 
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), svgr({
+    svgrOptions: {
+      icon: true,
+      plugins: ["@svgr/plugin-jsx"]
+    }
+  })],
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
   // 1. prevent Vite from obscuring rust errors
@@ -32,7 +38,8 @@ export default defineConfig({
     alias: {
       "@components": resolve(__dirname, './src/components'),
       "@pages": resolve(__dirname, './src/components/pages'),
-      "@lib": resolve(__dirname, './src/lib')
+      "@lib": resolve(__dirname, './src/lib'),
+      "@assets": resolve(__dirname, './src/assets')
     }
   },
   css: {

@@ -10,11 +10,11 @@ export const mainConsoleStyle = {
 
 export function windowedConsoleStyle(windowSize: {width: number; height: number} | null) {
     let width = 800;
-    let height = 240;
+    let height = 220;
     let margin = 8;
-    if (windowSize && (windowSize.height != 280 || windowSize.width != 820)) {
+    if (windowSize && (windowSize.height != 320 || windowSize.width != 820)) {
         width = windowSize.width * (800/820)
-        height = windowSize.height * (240/280)
+        height = windowSize.height * (220/280) - 30
         margin = (width % height) / 20
     }
     return {
