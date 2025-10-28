@@ -526,6 +526,7 @@ dependencies = [
  "tauri-plugin-global-shortcut",
  "tauri-plugin-opener",
  "tauri-plugin-store",
+ "tokio 1.48.0",
  "uuid",
 ]
 
@@ -905,6 +906,26 @@ name = "endi"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a3d8a32ae18130a3c84dd492d4215c3d913c3b07c6b63c2eb3eb7ff1101ab7bf"
+
+[[package]]
+name = "enum-iterator"
+version = "2.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4549325971814bda7a44061bf3fe7e487d447cba01e4220a4b454d630d7a016"
+dependencies = [
+ "enum-iterator-derive",
+]
+
+[[package]]
+name = "enum-iterator-derive"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "685adfa4d6f3d765a26bc5dbc936577de9abf756c1feeb3089b01dd395034842"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.106",
+]
 
 [[package]]
 name = "enumflags2"
@@ -1379,6 +1400,7 @@ dependencies = [
  "fnv",
  "gilrs-core",
  "log",
+ "serde",
  "uuid",
  "vec_map",
 ]
@@ -1397,6 +1419,7 @@ dependencies = [
  "libudev-sys",
  "log",
  "nix",
+ "serde",
  "uuid",
  "vec_map",
  "wasm-bindgen",
@@ -1681,7 +1704,7 @@ dependencies = [
  "pin-project-lite 0.2.16",
  "pin-utils",
  "smallvec 1.15.1",
- "tokio 1.47.1",
+ "tokio 1.48.0",
  "want",
 ]
 
@@ -1704,7 +1727,7 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite 0.2.16",
  "socket2",
- "tokio 1.47.1",
+ "tokio 1.48.0",
  "tower-service",
  "tracing",
 ]
@@ -1916,17 +1939,6 @@ checksum = "617ee6cf8e3f66f3b4ea67a4058564628cde41901316e19f559e14c7c72c5e7b"
 dependencies = [
  "core-foundation-sys",
  "mach2",
-]
-
-[[package]]
-name = "io-uring"
-version = "0.7.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "046fa2d4d00aea763528b4950358d0ead425372445dc8ff86312b3c69ff7727b"
-dependencies = [
- "bitflags 2.9.4",
- "cfg-if 1.0.3",
- "libc",
 ]
 
 [[package]]
@@ -3356,7 +3368,7 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "sync_wrapper",
- "tokio 1.47.1",
+ "tokio 1.48.0",
  "tokio-util 0.7.16",
  "tower",
  "tower-http",
@@ -4015,7 +4027,7 @@ dependencies = [
  "tauri-runtime-wry",
  "tauri-utils",
  "thiserror 2.0.17",
- "tokio 1.47.1",
+ "tokio 1.48.0",
  "tray-icon",
  "url",
  "urlpattern",
@@ -4154,7 +4166,7 @@ dependencies = [
  "tauri",
  "tauri-plugin",
  "thiserror 2.0.17",
- "tokio 1.47.1",
+ "tokio 1.48.0",
  "tracing",
 ]
 
@@ -4389,20 +4401,19 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.47.1"
+version = "1.48.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89e49afdadebb872d3145a5638b59eb0691ea23e46ca484037cfab3b76b95038"
+checksum = "ff360e02eab121e0bc37a2d3b4d4dc622e6eda3a8e5253d5435ecf5bd4c68408"
 dependencies = [
- "backtrace",
  "bytes 1.10.1",
- "io-uring",
  "libc",
  "mio 1.0.4",
+ "parking_lot",
  "pin-project-lite 0.2.16",
- "slab",
+ "signal-hook-registry",
  "socket2",
- "tokio-macros 2.5.0",
- "windows-sys 0.59.0",
+ "tokio-macros 2.6.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -4418,9 +4429,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-macros"
-version = "2.5.0"
+version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e06d43f1345a3bcd39f6a56dbb7dcab2ba47e68e8ac134855e7e2bdbaf8cab8"
+checksum = "af407857209536a95c8e56f8231ef2c2e2aff839b22e07a1ffcbc617e9db9fa5"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4451,7 +4462,7 @@ dependencies = [
  "futures-core",
  "futures-sink",
  "pin-project-lite 0.2.16",
- "tokio 1.47.1",
+ "tokio 1.48.0",
 ]
 
 [[package]]
@@ -4560,7 +4571,7 @@ dependencies = [
  "futures-util",
  "pin-project-lite 0.2.16",
  "sync_wrapper",
- "tokio 1.47.1",
+ "tokio 1.48.0",
  "tower-layer",
  "tower-service",
 ]

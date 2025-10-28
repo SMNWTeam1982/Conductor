@@ -1,12 +1,13 @@
 use crate::lib::ipc;
-use ds::{Alliance, DriverStation, DsMode, Mode, TcpPacket};
+use ds::{Alliance, Mode};
 use serde_json::{json, Value};
-use std::sync::Mutex;
+use tokio::sync::Mutex;
+use std::sync;
 use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_store::StoreExt;
 
 #[tauri::command]
-pub fn set_active_page(state: State<Mutex<ipc::AppState>>, page: u32) {
+pub fn set_active_page(state: State<sync::Mutex<ipc::AppState>>, page: u32) {
     let mut app_state = state.lock().unwrap();
     let active_page = match page {
         0 => ipc::ActivePage::Overview,
@@ -18,7 +19,7 @@ pub fn set_active_page(state: State<Mutex<ipc::AppState>>, page: u32) {
 }
 
 #[tauri::command]
-pub fn get_active_page(state: State<Mutex<ipc::AppState>>) -> u32 {
+pub fn get_active_page(state: State<sync::Mutex<ipc::AppState>>) -> u32 {
     let app_state = state.lock().unwrap();
     let active_page = match app_state.active_page {
         ipc::ActivePage::Overview => 0,
@@ -29,91 +30,128 @@ pub fn get_active_page(state: State<Mutex<ipc::AppState>>) -> u32 {
 }
 
 #[tauri::command]
-pub fn enable(app: AppHandle, state: State<Mutex<ipc::DriverStationState>>) {
-    let mut app_state = state.lock().unwrap();
-    app_state.ds.enable();
-    app.emit("is-enabled", app_state.ds.enabled()).unwrap();
-}
-
-#[tauri::command]
-pub fn disable(app: AppHandle, state: State<Mutex<ipc::DriverStationState>>) {
-    let mut app_state = state.lock().unwrap();
-    app_state.ds.disable();
-    app.emit("is-enabled", app_state.ds.enabled()).unwrap();
-}
-
-#[tauri::command]
-pub fn estop(app: AppHandle, state: State<Mutex<ipc::DriverStationState>>) {
-    let mut app_state = state.lock().unwrap();
-    app_state.ds.estop();
-    app.emit("is-enabled", app_state.ds.enabled()).unwrap();
-    if app_state.ds.trace().is_connected() {
-        app.emit("is-estopped", true).unwrap();
-    }
-}
-#[tauri::command]
-pub fn update_team_number(
+pub async fn enable(
     app: AppHandle,
-    state: State<Mutex<ipc::DriverStationState>>,
+    state: State<'_, Mutex<ipc::DriverStationState>>,
+) -> Result<(), ()> {
+    let mut app_state = state.lock().await;
+    app_state.ds.enable().await;
+    app.emit("is-enabled", app_state.ds.get_enable_status().await).unwrap();
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn disable(
+    app: AppHandle,
+    state: State<'_, Mutex<ipc::DriverStationState>>,
+) -> Result<(), ()> {
+    let mut app_state = state.lock().await;
+    app_state.ds.disable().await;
+    app.emit("is-enabled", app_state.ds.get_enable_status().await)
+        .unwrap();
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_enabled(state: State<'_, Mutex<ipc::DriverStationState>>) -> Result<bool, ()> {
+    let mut app_state = state.lock().await;
+    Ok(app_state.ds.get_enable_status().await)
+}
+
+#[tauri::command]
+pub async fn estop(
+    app: AppHandle,
+    state: State<'_, Mutex<ipc::DriverStationState>>,
+) -> Result<(), ()> {
+    let mut app_state = state.lock().await;
+    app_state.ds.estop().await;
+    app.emit("is-enabled", app_state.ds.get_enable_status().await)
+        .unwrap();
+    app.emit("is-estopped", app_state.ds.estopped).unwrap();
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_estopped(state: State<'_, Mutex<ipc::DriverStationState>>) -> Result<bool, ()> {
+    let app_state = state.lock().await;
+    Ok(app_state.ds.estopped)
+}
+
+#[tauri::command]
+pub async fn update_team_number(
+    app: AppHandle,
+    state: State<'_, Mutex<ipc::DriverStationState>>,
     team_number: u32,
-) {
-    let mut app_state = state.lock().unwrap();
+) -> Result<(), ()> {
+    let mut app_state = state.lock().await;
     let store = app.store("settings.json").unwrap();
-    if app_state.team_number != team_number {
+    if app_state.ds.team_number != team_number {
         store.set("teamNumber", team_number);
-        app_state.team_number = team_number;
-        app_state.ds = DriverStation::new_team(team_number, app_state.alliance);
+        app_state.ds.update_team_numer(team_number).await;
         store.save().unwrap();
     }
+    Ok(())
 }
 
 #[tauri::command]
-pub fn get_team_number(state: State<Mutex<ipc::DriverStationState>>) -> u32 {
-    let app_state = state.lock().unwrap();
-    return app_state.team_number;
+pub async fn get_team_number(state: State<'_, Mutex<ipc::DriverStationState>>) -> Result<u32, ()> {
+    let mut app_state = state.lock().await;
+    Ok(app_state.ds.get_team_number().await)
 }
 
 #[tauri::command]
-pub fn update_game_data(state: State<Mutex<ipc::DriverStationState>>, gsm: String) {
-    let mut app_state = state.lock().unwrap();
-    app_state.gsm = gsm.clone();
-    app_state.ds.set_game_specific_message(&gsm).unwrap();
+pub async fn update_game_data(
+    state: State<'_, Mutex<ipc::DriverStationState>>,
+    gsm: String,
+) -> Result<(), ()> {
+    let mut app_state = state.lock().await;
+    app_state.ds.update_game_data(gsm).await;
+    Ok(())
 }
 
 #[tauri::command]
-pub fn get_game_data(state: State<Mutex<ipc::DriverStationState>>) -> String {
-    let app_state = state.lock().unwrap();
-    return app_state.gsm.clone();
+pub async fn get_game_data(state: State<'_, Mutex<ipc::DriverStationState>>) -> Result<String, ()> {
+    let mut app_state = state.lock().await;
+    Ok(app_state.ds.get_game_data().await)
 }
 
 #[tauri::command]
-pub fn use_usb(state: State<Mutex<ipc::DriverStationState>>, value: bool) {
-    let mut app_state = state.lock().unwrap();
-    app_state.use_usb = value;
-    app_state.ds.set_use_usb(value);
+pub async fn use_usb(
+    state: State<'_, Mutex<ipc::DriverStationState>>,
+    value: bool,
+) -> Result<(), ()> {
+    let mut app_state = state.lock().await;
+    app_state.ds.update_use_usb(value).await;
+    Ok(())
 }
 
 #[tauri::command]
-pub fn get_usb(state: State<Mutex<ipc::DriverStationState>>) -> bool {
-    let app_state = state.lock().unwrap();
-    return app_state.use_usb;
+pub async fn get_usb(state: State<'_, Mutex<ipc::DriverStationState>>) -> Result<bool, ()> {
+    let mut app_state = state.lock().await;
+    Ok(app_state.ds.get_use_usb().await)
 }
 
 #[tauri::command]
-pub fn restart_code(state: State<Mutex<ipc::DriverStationState>>) {
-    let mut app_state = state.lock().unwrap();
-    app_state.ds.restart_code();
+pub async fn restart_code(state: State<'_, Mutex<ipc::DriverStationState>>) -> Result<(), ()> {
+    let mut app_state = state.lock().await;
+    app_state.ds.restart_code().await;
+    Ok(())
 }
 
 #[tauri::command]
-pub fn restart_roborio(state: State<Mutex<ipc::DriverStationState>>) {
-    let mut app_state = state.lock().unwrap();
-    app_state.ds.restart_roborio();
+pub async fn restart_roborio(state: State<'_, Mutex<ipc::DriverStationState>>) -> Result<(), ()> {
+    let mut app_state = state.lock().await;
+    app_state.ds.restart_roborio().await;
+    Ok(())
 }
 
 #[tauri::command]
-pub fn set_mode(app: AppHandle, state: State<Mutex<ipc::DriverStationState>>, mode: u32) {
-    let mut app_state = state.lock().unwrap();
+pub async fn set_mode(
+    app: AppHandle,
+    state: State<'_, Mutex<ipc::DriverStationState>>,
+    mode: u32,
+) -> Result<(), ()> {
+    let mut app_state = state.lock().await;
     let active_mode = match mode {
         0 => Mode::Autonomous,
         1 => Mode::Teleoperated,
@@ -121,22 +159,26 @@ pub fn set_mode(app: AppHandle, state: State<Mutex<ipc::DriverStationState>>, mo
         3_u32..=u32::MAX => unreachable!(),
     };
     app.emit("mode", mode).unwrap();
-    app_state.mode = active_mode;
-    app_state.ds.set_mode(active_mode);
+    app_state.ds.update_mode(active_mode).await;
+    Ok(())
 }
 #[tauri::command]
-pub fn get_mode(state: State<Mutex<ipc::DriverStationState>>) -> u32 {
-    let app_state = state.lock().unwrap();
-    return match app_state.mode {
-        Mode::Autonomous => 0,
-        Mode::Teleoperated => 1,
-        Mode::Test => 2,
-    };
+pub async fn get_mode(state: State<'_, Mutex<ipc::DriverStationState>>) -> Result<u32, ()> {
+    let mut app_state = state.lock().await;
+    match app_state.ds.get_mode().await {
+        Mode::Autonomous => Ok(0),
+        Mode::Teleoperated => Ok(1),
+        Mode::Test => Ok(2)
+    }
 }
 
 #[tauri::command]
-pub fn set_alliance(app: AppHandle, state: State<Mutex<ipc::DriverStationState>>, alliance: u32) {
-    let mut app_state = state.lock().unwrap();
+pub async fn set_alliance(
+    app: AppHandle,
+    state: State<'_, Mutex<ipc::DriverStationState>>,
+    alliance: u32,
+) -> Result<(), ()> {
+    let mut app_state = state.lock().await;
     let active_alliance = match alliance {
         0 => Alliance::new_red(1),
         1 => Alliance::new_red(2),
@@ -147,40 +189,41 @@ pub fn set_alliance(app: AppHandle, state: State<Mutex<ipc::DriverStationState>>
         6_u32..=u32::MAX => unreachable!(),
     };
     app.emit("alliance", alliance).unwrap();
-    app_state.alliance = active_alliance;
-    app_state.ds.set_alliance(active_alliance);
+    app_state.ds.update_alliance(active_alliance).await;
+    Ok(())
 }
 #[tauri::command]
-pub fn get_alliance(state: State<Mutex<ipc::DriverStationState>>) -> u32 {
-    let app_state = state.lock().unwrap();
-    let active_alliance: Alliance = app_state.alliance;
-    return (active_alliance.position() - 1 + if active_alliance.is_red() { 0 } else { 3 }).into();
+pub async fn get_alliance(state: State<'_, Mutex<ipc::DriverStationState>>) -> Result<u32, ()> {
+    let mut app_state = state.lock().await;
+    let active_alliance = app_state.ds.get_alliance().await;
+    return Ok(
+        (active_alliance.position() - 1 + if active_alliance.is_red() { 0 } else { 3 }).into(),
+    );
 }
 
 #[tauri::command]
-pub fn get_robotstate(state: State<Mutex<ipc::DriverStationState>>) -> Value {
-    let app_state = state.lock().unwrap();
-    let ds = &app_state.ds;
-    let sim = ds.ds_mode() == DsMode::Simulation;
-    let comms = ds.trace().is_connected();
-    let code = ds.trace().is_code_started();
-    let voltage = ds.battery_voltage();
-    json!({
+pub async fn get_robotstate(state: State<'_, Mutex<ipc::DriverStationState>>) -> Result<Value, ()> {
+    let mut app_state = state.lock().await;
+    let sim = app_state.ds.get_simulator().await;
+    let comms = app_state.ds.get_comms_alive().await;
+    let code = app_state.ds.get_code_alive().await;
+    let voltage = app_state.ds.get_battery_voltage().await;
+    Ok(json!({
         "hasComms": comms || sim,
         "hasCode": code,
         "hasJoysticks": false,
         "isSimulator": sim,
         "batteryVoltage": voltage
-    })
+    }))
 }
 
 #[tauri::command]
-pub fn manage_console(
+pub async fn manage_console(
     app: AppHandle,
-    state: State<Mutex<ipc::DriverStationState>>,
+    state: State<'_, Mutex<ipc::DriverStationState>>,
     message_type: u32,
-) {
-    let mut app_state = state.lock().unwrap();
+) -> Result<(), ()> {
+    let mut app_state = state.lock().await;
     let console_message = match message_type {
         0 => ipc::ConsoleMessage::Singular(String::new()),
         1 => ipc::ConsoleMessage::Singular(String::new()),
@@ -199,20 +242,21 @@ pub fn manage_console(
     )
     .unwrap();
     app_state.last_output = ipc::ConsoleOutput::new(console_message, message_type);
-    app_state.ds.set_tcp_consumer(move |packet| match packet {
-        TcpPacket::Stdout(stdout) => {
-            app.emit(
-                "console-message",
-                ipc::ConsoleOutput::new(ipc::ConsoleMessage::Singular(stdout.message), 3),
-            )
-            .unwrap();
-        }
-        TcpPacket::Dummy => {}
-    });
+    // app_state.ds.set_tcp_consumer(move |packet| match packet {
+    //     TcpPacket::Stdout(stdout) => {
+    //         app.emit(
+    //             "console-message",
+    //             ipc::ConsoleOutput::new(ipc::ConsoleMessage::Singular(stdout.message), 3),
+    //         )
+    //         .unwrap();
+    //     }
+    //     TcpPacket::Dummy => {}
+    // });
+    Ok(())
 }
 
 #[tauri::command]
-pub fn get_last_console_output(state: State<Mutex<ipc::DriverStationState>>) -> ipc::ConsoleOutput {
-    let app_state = state.lock().unwrap();
-    return app_state.last_output.clone();
+pub async fn get_last_console_output(state: State<'_,Mutex<ipc::DriverStationState>>) -> Result<ipc::ConsoleOutput, ()> {
+    let app_state = state.lock().await;
+    Ok(app_state.last_output.clone())
 }

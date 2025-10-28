@@ -1,9 +1,8 @@
-use ds::{Alliance, DriverStation, Mode};
+use crate::lib::backend;
 use gilrs::{GamepadId, Gilrs};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tauri::App;
-use tauri_plugin_store::StoreExt;
+use tokio::sync::mpsc;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -80,38 +79,21 @@ impl ConsoleOutput {
 }
 
 pub struct DriverStationState {
-    pub ds: DriverStation,
-    pub mode: Mode,
-    pub alliance: Alliance,
-    pub gsm: String,
+    pub ds: backend::DriverStation,
     pub has_joysticks: bool,
     pub last_output: ConsoleOutput,
-    pub use_usb: bool,
-    pub team_number: u32,
 }
 
 impl DriverStationState {
-    pub fn new(app: &mut App) -> Self {
-        let store = app.store("settings.json").unwrap();
-        let team_number = store
-            .get("teamNumber")
-            .and_then(|v| v.as_u64())
-            .map(|v| v as u32)
-            .unwrap_or(0);
-        let ds = if team_number == 0 {
-            DriverStation::new("", Alliance::new_red(1), 0)
-        } else {
-            DriverStation::new_team(team_number, Alliance::new_red(1))
-        };
+    pub fn new(
+        team_number: u32,
+        command_sender: mpsc::Sender<backend::DriverStationCommand>,
+        response_reciever: mpsc::Receiver<backend::DriverStationResponse>,
+    ) -> Self {
         DriverStationState {
-            ds,
-            mode: Mode::Autonomous,
-            alliance: Alliance::new_red(1),
-            gsm: String::new(),
+            ds: backend::DriverStation::new(team_number, command_sender, response_reciever),
             has_joysticks: false,
             last_output: ConsoleOutput::new(ConsoleMessage::Singular(String::new()), 1),
-            use_usb: false,
-            team_number: team_number,
         }
     }
 }

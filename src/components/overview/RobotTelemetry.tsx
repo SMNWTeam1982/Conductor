@@ -17,8 +17,8 @@ class RobotTelemetry extends React.Component<ComponentProps, any> {
         } else {
             badge = (
                 <span className="badge text-bg-danger text-danger" style={failStyle}
-                    onMouseEnter={() => invoke("manage_console", { messageType })}
-                    onMouseLeave={() => invoke("manage_console", { messageType: ConsoleMessageType.CLEAR_CONSOLE })}
+                    onMouseEnter={async () => await invoke("manage_console", { messageType })}
+                    onMouseLeave={async () => await invoke("manage_console", { messageType: ConsoleMessageType.CLEAR_CONSOLE })}
                     >AA</span>
             )
         }

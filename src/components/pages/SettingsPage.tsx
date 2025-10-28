@@ -50,7 +50,7 @@ class SettingsPage extends React.Component<any, PageState> {
                     <div className="flex-column d-flex mt-2">
                         <ActionButton action={ConsoleMessageType.RESTART_CODE} actionCallback={() => this.restartButtonHandler(ConsoleMessageType.RESTART_CODE)} />
                         <ActionButton action={ConsoleMessageType.RESTART_ROBOT} actionCallback={() => this.restartButtonHandler(ConsoleMessageType.RESTART_ROBOT)} />
-                        <ActionButton actionCallback={() => invoke("create_console_window")} title="Open Console" icon="bi-terminal" />
+                        <ActionButton actionCallback={async () => await invoke("create_console_window")} title="Open Console" icon="bi-terminal" />
                     </div>
                 </div>
             </div>
@@ -63,7 +63,7 @@ class SettingsPage extends React.Component<any, PageState> {
             if (team.length <= 4) this.setState({ teamNumber: parseInt(team) })
         }
         if (this.state.teamNumber) {
-            setTimeout(() => invoke('update_team_number', { teamNumber: this.state.teamNumber }), 500)
+            setTimeout(async () => await invoke('update_team_number', { teamNumber: this.state.teamNumber }), 500)
         }
     }
     gsmChangeHandler(inputEvent?: FormEvent<HTMLInputElement>) {
@@ -72,13 +72,13 @@ class SettingsPage extends React.Component<any, PageState> {
             if (data.length <= 3) this.setState({ gsm: data })
         }
         if (this.state.gsm && this.state.gsm.length == 3) {
-            setTimeout(() => invoke('update_game_data', { gsm: this.state.gsm }), 500)
+            setTimeout(async () => await invoke('update_game_data', { gsm: this.state.gsm }), 500)
         }
     }
 
-    usbStateChangeHandler() {
+    async usbStateChangeHandler() {
         this.setState({ useUSB: !this.state.useUSB })
-        invoke("use_usb", { value: !this.state.useUSB });
+        await invoke("use_usb", { value: !this.state.useUSB });
         // setTimeout(async () => {
         //     let currentState = await invoke<DriverStationState>("get_robotstate");
         //     console.log(currentState)
@@ -93,10 +93,10 @@ class SettingsPage extends React.Component<any, PageState> {
     async restartButtonHandler(action: ConsoleMessageType) {
         switch (action) {
             case ConsoleMessageType.RESTART_CODE:
-                invoke("restart_code");
+                await invoke("restart_code");
                 break;
             case ConsoleMessageType.RESTART_ROBOT:
-                invoke("restart_roborio");
+                await invoke("restart_roborio");
                 break;
         }
         // await invoke("manage_console", { messageType: ConsoleMessageType.NO_OUTPUT });

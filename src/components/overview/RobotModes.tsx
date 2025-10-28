@@ -20,7 +20,7 @@ class ModeList extends React.Component<any, ComponentState> {
     }
 
     async handleClick(event: React.MouseEvent<HTMLButtonElement>, mode: Mode) {
-        invoke('set_mode', { mode: mode });
+        await invoke('set_mode', { mode: mode });
         event.currentTarget.blur();
     }
 

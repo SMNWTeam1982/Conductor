@@ -29,13 +29,16 @@ class OverviewPage extends React.Component<any, PageState> {
         let currentState = await invoke<DriverStationState>('get_robotstate');
         let currentMode = await invoke<ControlMode>('get_mode');
         let teamNumber = await invoke<number>('get_team_number');
+        let enabled = await invoke<boolean>('get_enabled');
         await invoke("manage_console", { messageType: ConsoleMessageType.NO_OUTPUT })
 
         setInterval(async () => {
             const prevState = this.state.driverStationState
             const newState = await invoke<DriverStationState>('get_robotstate');
             const lastOutput = await invoke<ConsoleOutput>('get_last_console_output')
-            if (newState.isSimulator && (lastOutput.messageType == ConsoleMessageType.CLEAR_CONSOLE || (!lastOutput.messageName.includes("ERROR") && lastOutput.messageContent == ""))) {
+            const estopped = await invoke<boolean>('get_estopped');
+
+            if (newState.isSimulator && lastOutput.messageType != ConsoleMessageType.SIMULATION_MESSAGE && (lastOutput.messageType == ConsoleMessageType.CLEAR_CONSOLE || (!lastOutput.messageName.includes("ERROR") && lastOutput.messageContent == ""))) {
                 await invoke("manage_console", { messageType: ConsoleMessageType.SIMULATION_MESSAGE })
             }
             if (!newState.isSimulator && (lastOutput.messageType == ConsoleMessageType.SIMULATION_MESSAGE)) {
@@ -45,6 +48,7 @@ class OverviewPage extends React.Component<any, PageState> {
                 await invoke("manage_console", { messageType: ConsoleMessageType.NO_OUTPUT })
             }
             if (prevState && (newState.hasComms != prevState.hasComms || newState.hasCode != prevState.hasCode)) this.setState({ driverStationState: newState });
+            if (this.state.estopped !== estopped) this.setState({ estopped })
         }, 50)
         listen<number>('mode', (event) => {
             this.setState({ mode: event.payload })
@@ -56,7 +60,7 @@ class OverviewPage extends React.Component<any, PageState> {
         listen<boolean>('is-estopped', (event) => {
             this.setState({ estopped: event.payload })
         })
-        this.setState({ mode: currentMode, driverStationState: currentState, teamNumber })
+        this.setState({ mode: currentMode, driverStationState: currentState, teamNumber, enabled })
     }
     componentWillUnmount(): void {
     }
@@ -102,7 +106,7 @@ class OverviewPage extends React.Component<any, PageState> {
                 </div>
                 <div className="row user-select-none" style={{ marginTop: "-50px" }}>
                     <div className="col-3 text-center mt-4">
-                        <RobotControls enabled={this.state.enabled} />
+                        <RobotControls enabled={this.state.enabled} estopped={this.state.estopped} />
                     </div>
                     <div className="col-3 mt-4 user-select-none">
                         <AllianceSelector />

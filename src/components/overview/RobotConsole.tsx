@@ -46,10 +46,9 @@ class RobotConsole extends React.Component<ComponentProps, ComponentState> {
                     case ConsoleMessageType.JOYSTICK_ERROR: this.setState({ consoleShouldClear: false }); break;
                     case ConsoleMessageType.CONSOLE_MESSAGE: this.setState( {consoleShouldClear: false}); break;
                     case ConsoleMessageType.SIMULATION_MESSAGE: this.setState({ consoleShouldClear: true }); break;
-                    default: this.setState({ consoleShouldClear: true})
+                    case ConsoleMessageType.CLEAR_CONSOLE: this.setState({ consoleShouldClear: true}); break;
                 }
-                if (lastOutput.messageType == ConsoleMessageType.SIMULATION_MESSAGE && lastOutput.messageType == latestOutput.messageType) currentMessages = []
-                if (this.state.consoleShouldClear) currentMessages = [];
+                if (this.state.consoleShouldClear || latestOutput.clearConsole) currentMessages = [];
                 if (typeof latestOutput.messageContent === "string" && latestOutput.messageContent !== "") currentMessages.push(latestOutput.messageContent);
                 if (Array.isArray(latestOutput.messageContent)) currentMessages = currentMessages.concat(latestOutput.messageContent);
                 this.setState({ messages: currentMessages, consoleOutput: latestOutput })
@@ -73,12 +72,8 @@ class RobotConsole extends React.Component<ComponentProps, ComponentState> {
                     case ConsoleMessageType.COMMS_ERROR: this.setState({ consoleShouldClear: false }); break;
                     case ConsoleMessageType.CODE_ERROR: this.setState({ consoleShouldClear: false }); break;
                     case ConsoleMessageType.JOYSTICK_ERROR: this.setState({ consoleShouldClear: false }); break;
-                    case ConsoleMessageType.SIMULATION_MESSAGE: {
-                        if (latestOutput.messageType == lastOutput.messageType) this.setState({ consoleShouldClear: true });
-                        this.setState({ consoleShouldClear: false})
-                        break;
-                    }
-                    case ConsoleMessageType.CLEAR_CONSOLE: (latestOutput.messageType == lastOutput.messageType) && this.setState({ consoleShouldClear: true }); break;
+                    case ConsoleMessageType.SIMULATION_MESSAGE: if (latestOutput.messageType == lastOutput.messageType) this.setState({ consoleShouldClear: true }); break;
+                    case ConsoleMessageType.CLEAR_CONSOLE: if (latestOutput.messageType == lastOutput.messageType) this.setState({ consoleShouldClear: true }); break;
                     case ConsoleMessageType.RESTART_CODE: this.setState({ consoleShouldClear: false }); break;
                     case ConsoleMessageType.RESTART_ROBOT: this.setState({ consoleShouldClear: false }); break;
                 }
@@ -118,7 +113,7 @@ class RobotConsole extends React.Component<ComponentProps, ComponentState> {
                 {this.props.window == 'console' && <div className='d-flex justify-content-end'>
                     <div className="col"></div>
                     <div className="col float-end d-flex flex-column align-content-center justify-content-end w-100" style={{ "marginLeft": "25%" }}>
-                        <ActionButton actionCallback={() => invoke('manage_console', { messageType: ConsoleMessageType.CLEAR_CONSOLE })} title='Clear Console' icon="bi-trash" />
+                        <ActionButton actionCallback={async () => await invoke('manage_console', { messageType: ConsoleMessageType.CLEAR_CONSOLE })} title='Clear Console' icon="bi-trash" />
                     </div>
                 </div>}
             </div>
