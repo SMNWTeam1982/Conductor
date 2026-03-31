@@ -98,33 +98,92 @@ impl DriverStationState {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct GamepadData {
-    pub assigned_id: Uuid,
-    pub gid: GamepadId,
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct InputDevice {
+    pub unique_id: Uuid,
+    pub device_id: Option<GamepadId>,
     pub name: String,
 }
-
-// pub struct JoystickUpdate {
-//     removed: bool,
-//     name: String,
-//     uuid: String,
-// }
-
-pub struct JoystickState {
+pub struct InputState {
     pub gil: Gilrs,
-    pub gamepads: Vec<GamepadData>,
+    pub devices: Vec<InputDevice>,
     pub mappings: HashMap<Uuid, usize>,
 }
 
-impl JoystickState {
-    pub fn new() -> JoystickState {
-        JoystickState {
+impl InputState {
+    pub fn new() -> InputState {
+        let mut devices = Vec::new();
+        devices.push(InputDevice {
+            unique_id: Uuid::nil(),
+            name: "Virtual Joystick".to_string(),
+            device_id: None,
+        });
+        InputState {
             gil: Gilrs::new().unwrap(),
-            gamepads: Vec::new(),
+            devices: devices,
             mappings: HashMap::new(),
         }
     }
+    pub fn has_input(&self) -> bool {
+        !self.devices.is_empty()
+    }
+    pub fn add_mapping(&mut self, id: Uuid, position: usize) {
+        self.mappings.insert(id, position);
+    }
+    pub fn update(&mut self) {
+        self.gil.next_event();
+
+        let new_devices = self
+            .gil
+            .gamepads()
+            .any(|(id, _)| !self.devices.iter().any(|gp| gp.device_id == Some(id)));
+        let removed_devices = self
+            .devices
+            .iter()
+            .filter_map(|dev| dev.device_id)
+            .any(|id| !self.gil.gamepad(id).is_connected());
+        if new_devices {
+            let dev = self.devices.clone();
+            for (dev_id, dev) in self
+                .gil
+                .gamepads()
+                .filter(|(id, _)| !dev.iter().any(|dev| dev.device_id == Some(*id)))
+            {
+                let unique_id = Uuid::new_v4();
+                let device = InputDevice {
+                    unique_id,
+                    device_id: Some(dev_id),
+                    name: dev.name().to_string(),
+                };
+                self.devices.push(device);
+            }
+        }
+        if removed_devices {
+            for (pos, dev) in self.devices.clone().into_iter().enumerate() {
+                if let Some(id) = dev.device_id {
+                    if self.gil.gamepad(id).is_connected() {
+                        continue;
+                    }
+                }
+                self.devices.remove(pos);
+            }
+        }
+    }
+    pub fn device_id_to_uuid(&self, device_id: GamepadId) -> Option<Uuid> {
+        self.devices
+            .iter()
+            .find(|dev| dev.device_id == Some(device_id))
+            .map(|dev| dev.unique_id)
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct InputUpdate {
+    pub device: InputDevice,
+    pub removed: bool,
+    pub mapping: HashMap<bool, u32>,
 }
 // pub fn update(&mut self) {
 //     self.gil.next_event();

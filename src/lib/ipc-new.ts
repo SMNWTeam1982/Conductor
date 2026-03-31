@@ -79,3 +79,36 @@ export interface ConsoleOutput {
     messageName: string;
     clearConsole: boolean;
 }
+
+
+/**
+ * Represents an abstract Input device with unique and (potentially) non-unique identifiers
+ */
+export interface InputDevice {
+    uniqueId: string;
+    deviceId: number;
+    name: string;
+}
+
+/**
+ * Represents the backend state of connected Input devices
+ */
+export interface InputState {
+    devices: InputDevice[],
+    mappings: {
+        uuid: string;
+        position: number;
+    }[]
+}
+
+/**
+ * Represents an event fired when an Input device is updated
+ */
+export interface InputUpdate {
+    device: InputDevice
+    removed: boolean;
+    mapping: {
+        updated: boolean;
+        position: number;
+    }
+}

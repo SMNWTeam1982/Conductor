@@ -11,7 +11,7 @@ import {
     UPDATE_TEAM_NUMBER,
     UPDATE_USB_STATUS
 } from "./ipc";
-import { type JoystickData } from "../components/input/InputList";
+import { type JoystickData } from "../components/input/InputItem";
 import { v4 as newV4Uuid } from "uuid";
 
 export enum ActivePage {

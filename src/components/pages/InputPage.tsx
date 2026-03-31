@@ -1,27 +1,18 @@
-import { type DriverStationState, REORDER_JOYSTICKS, UPDATE_JOYSTICK_MAPPING_INTERNAL } from "@lib/store";
-import { connect, type ConnectedProps } from "react-redux";
 import React from "react";
 import { DragDropContext, Droppable, type DropResult } from '@hello-pangea/dnd';
-import { InputList, type JoystickData } from "@components/input/InputList";
+import { InputItem } from "@components/input/InputItem";
 import { InputTester } from "@components/input/inputTester";
+import { InputState } from "@lib/ipc-new";
+// import { invoke } from "@tauri-apps/api/core";
+// import { listen } from "@tauri-apps/api/event";
 
-const mapState = (state: DriverStationState) => ({
-    joysticks: state.joysticks,
-    mappings: state.joystickMappings
-})
 
-const mapDispatch = {
-    updateList: (js: JoystickData, startIdx: number, endIdx: number) => ({ type: REORDER_JOYSTICKS, js: js, oldIdx: startIdx, newIdx: endIdx }),
-    updateMapping: (name: string, pos: number, uuid: string) => ({ type: UPDATE_JOYSTICK_MAPPING_INTERNAL, name: name, pos: pos, uuid: uuid })
-}
+type PageState = InputState;
 
-const connector = connect(mapState, mapDispatch);
-
-type Props = ConnectedProps<typeof connector>;
-
-class InputPage extends React.Component<Props, any> {
-    constructor(props: Props) {
+class InputPage extends React.Component<any, PageState> {
+    constructor(props: any) {
         super(props)
+        this.state = { devices: [ { uniqueId: "sdfjuhskdjfn", deviceId: 0, name: "Unbound"}], mappings: []}
         this.onDragEnd = this.onDragEnd.bind(this)
     }
 
@@ -29,9 +20,6 @@ class InputPage extends React.Component<Props, any> {
         if (!result.destination) {
             return;
         }
-
-        this.props.updateList(this.props.joysticks[result.source.index], result.source.index, result.destination.index)
-        this.props.updateMapping(this.props.joysticks[result.source.index].name, result.destination.index, this.props.joysticks[result.source.index].id);
     }
 
     render() {
@@ -42,12 +30,11 @@ class InputPage extends React.Component<Props, any> {
                         <p className="text-light text-center mb-0">Connected Input Sources</p>
                         <DragDropContext onDragEnd={this.onDragEnd}>
                             <Droppable droppableId="joysticksList">
-                                {(provided: any) => (
+                                {(provided) => (
                                     <div
-                                        key={provided.index}
                                         ref={provided.innerRef}
                                         {...provided.droppableProps}>
-                                        {this.props.joysticks.map((data, index) => (<InputList key={data.id} {...data} index={index} />))}
+                                        {this.state.devices.map((device, index) => (<InputItem device={device} key={index} deviceIndex={index} mappings={this.state.mappings}/>))}
                                         {provided.placeholder}
                                     </div>
                                 )}
@@ -64,4 +51,4 @@ class InputPage extends React.Component<Props, any> {
     }
 }
 
-export default connector(InputPage)
+export default InputPage

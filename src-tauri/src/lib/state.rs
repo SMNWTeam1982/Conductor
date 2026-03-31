@@ -1,10 +1,10 @@
 use crate::lib::ipc;
 use ds::{Alliance, Mode};
 use serde_json::{json, Value};
-use tokio::sync::Mutex;
 use std::sync;
 use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_store::StoreExt;
+use tokio::sync::Mutex;
 
 #[tauri::command]
 pub fn set_active_page(state: State<sync::Mutex<ipc::AppState>>, page: u32) {
@@ -36,7 +36,8 @@ pub async fn enable(
 ) -> Result<(), ()> {
     let mut app_state = state.lock().await;
     app_state.ds.enable().await;
-    app.emit("is-enabled", app_state.ds.get_enable_status().await).unwrap();
+    app.emit("is-enabled", app_state.ds.get_enable_status().await)
+        .unwrap();
     Ok(())
 }
 
@@ -168,7 +169,7 @@ pub async fn get_mode(state: State<'_, Mutex<ipc::DriverStationState>>) -> Resul
     match app_state.ds.get_mode().await {
         Mode::Autonomous => Ok(0),
         Mode::Teleoperated => Ok(1),
-        Mode::Test => Ok(2)
+        Mode::Test => Ok(2),
     }
 }
 
@@ -202,7 +203,7 @@ pub async fn get_alliance(state: State<'_, Mutex<ipc::DriverStationState>>) -> R
 }
 
 #[tauri::command]
-pub async fn get_robotstate(state: State<'_, Mutex<ipc::DriverStationState>>) -> Result<Value, ()> {
+pub async fn get_ds_state(state: State<'_, Mutex<ipc::DriverStationState>>) -> Result<Value, ()> {
     let mut app_state = state.lock().await;
     let sim = app_state.ds.get_simulator().await;
     let comms = app_state.ds.get_comms_alive().await;
@@ -242,21 +243,14 @@ pub async fn manage_console(
     )
     .unwrap();
     app_state.last_output = ipc::ConsoleOutput::new(console_message, message_type);
-    // app_state.ds.set_tcp_consumer(move |packet| match packet {
-    //     TcpPacket::Stdout(stdout) => {
-    //         app.emit(
-    //             "console-message",
-    //             ipc::ConsoleOutput::new(ipc::ConsoleMessage::Singular(stdout.message), 3),
-    //         )
-    //         .unwrap();
-    //     }
-    //     TcpPacket::Dummy => {}
-    // });
+    app_state.ds.handle_console(app).await;
     Ok(())
 }
 
 #[tauri::command]
-pub async fn get_last_console_output(state: State<'_,Mutex<ipc::DriverStationState>>) -> Result<ipc::ConsoleOutput, ()> {
+pub async fn get_last_console_output(
+    state: State<'_, Mutex<ipc::DriverStationState>>,
+) -> Result<ipc::ConsoleOutput, ()> {
     let app_state = state.lock().await;
     Ok(app_state.last_output.clone())
 }

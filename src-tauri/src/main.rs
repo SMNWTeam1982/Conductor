@@ -37,7 +37,7 @@ fn main() {
             state::get_mode,
             state::set_alliance,
             state::get_alliance,
-            state::get_robotstate,
+            state::get_ds_state,
             state::manage_console,
             state::get_last_console_output,
             input::has_joysticks,
@@ -67,7 +67,11 @@ fn main() {
             .inner_size(width, height)
             .build()
             .expect("Failed to create main window");
-            app.manage(Mutex::new(ipc::DriverStationState::new(team_number, ds_command_tx, ds_response_rx)));
+            app.manage(Mutex::new(ipc::DriverStationState::new(
+                team_number,
+                ds_command_tx,
+                ds_response_rx,
+            )));
 
             Ok(())
         })

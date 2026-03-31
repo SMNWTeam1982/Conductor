@@ -26,7 +26,7 @@ class OverviewPage extends React.Component<any, PageState> {
         this.state = { enabled: null, estopped: null, mode: null, driverStationState: null, teamNumber: null }
     }
     async componentDidMount(): Promise<void> {
-        let currentState = await invoke<DriverStationState>('get_robotstate');
+        let currentState = await invoke<DriverStationState>('get_ds_state');
         let currentMode = await invoke<ControlMode>('get_mode');
         let teamNumber = await invoke<number>('get_team_number');
         let enabled = await invoke<boolean>('get_enabled');

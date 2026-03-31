@@ -77,7 +77,7 @@ class RobotConsole extends React.Component<ComponentProps, ComponentState> {
                     case ConsoleMessageType.RESTART_CODE: this.setState({ consoleShouldClear: false }); break;
                     case ConsoleMessageType.RESTART_ROBOT: this.setState({ consoleShouldClear: false }); break;
                 }
-                if (latestOutput.clearConsole && (this.state.consoleShouldClear || latestOutput.messageType == ConsoleMessageType.SIMULATION_MESSAGE)) currentMessages = [];
+                if (latestOutput.clearConsole || (this.state.consoleShouldClear || latestOutput.messageType == ConsoleMessageType.SIMULATION_MESSAGE)) currentMessages = [];
 
                 if (typeof latestOutput.messageContent === "string" && latestOutput.messageContent !== "") currentMessages.push(latestOutput.messageContent);
                 this.setState({ messages: currentMessages, consoleOutput: latestOutput })
