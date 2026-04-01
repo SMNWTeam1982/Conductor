@@ -10,7 +10,7 @@ import {
     UPDATE_GSM,
     UPDATE_TEAM_NUMBER,
     UPDATE_USB_STATUS
-} from "./ipc";
+} from "./ipc-old";
 import { type JoystickData } from "../components/input/InputItem";
 import { v4 as newV4Uuid } from "uuid";
 

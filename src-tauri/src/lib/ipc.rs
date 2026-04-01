@@ -24,78 +24,55 @@ impl AppState {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
-#[serde(untagged)]
-pub enum ConsoleMessage {
-    Singular(String),
-    Multiple(Vec<String>),
-    None,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum ConsoleMessageType {
-    NoOutput,
-    ClearConsole,
-    SimulationMessage,
-    ConsoleMessage,
-    CommsError,
-    CodeError,
-    JoystickError,
-    RestartCode,
-    RestartRobot,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct ConsoleOutput {
-    pub message_content: ConsoleMessage,
-    pub message_type: u32,
-    pub message_name: ConsoleMessageType,
-    pub clear_console: bool,
-}
-
-impl ConsoleOutput {
-    pub fn new(message: ConsoleMessage, message_type: u32) -> Self {
-        let (returned_type, clear) = match message_type {
-            0 => (ConsoleMessageType::NoOutput, false),
-            1 => (ConsoleMessageType::ClearConsole, true),
-            2 => (ConsoleMessageType::SimulationMessage, true),
-            3 => (ConsoleMessageType::ConsoleMessage, false),
-            4 => (ConsoleMessageType::CommsError, true),
-            5 => (ConsoleMessageType::CodeError, true),
-            6 => (ConsoleMessageType::JoystickError, true),
-            7 => (ConsoleMessageType::RestartCode, false),
-            8 => (ConsoleMessageType::RestartRobot, false),
-            9_u32..=u32::MAX => (ConsoleMessageType::NoOutput, false),
-        };
-        ConsoleOutput {
-            message_content: message,
-            message_type: message_type,
-            message_name: returned_type,
-            clear_console: clear,
-        }
-    }
-}
-
 pub struct DriverStationState {
     pub ds: backend::DriverStation,
     pub has_joysticks: bool,
-    pub last_output: ConsoleOutput,
 }
 
 impl DriverStationState {
     pub fn new(
         team_number: u32,
         command_sender: mpsc::Sender<backend::DriverStationCommand>,
-        response_reciever: mpsc::Receiver<backend::DriverStationResponse>,
+        response_receiver: mpsc::Receiver<backend::DriverStationResponse>,
     ) -> Self {
         DriverStationState {
-            ds: backend::DriverStation::new(team_number, command_sender, response_reciever),
+            ds: backend::DriverStation::new(team_number, command_sender, response_receiver),
             has_joysticks: false,
-            last_output: ConsoleOutput::new(ConsoleMessage::Singular(String::new()), 1),
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", tag = "type")]
+pub enum ConsoleAction {
+    Append { 
+        line: String,
+        #[serde(default, alias = "frontendAction")]
+        frontend_action: bool 
+    },
+    AppendMany { 
+        lines: Vec<String>,
+        #[serde(default, alias = "frontendAction")]
+        frontend_action: bool 
+    },
+    Clear { 
+        #[serde(default, alias = "frontendAction")]
+        frontend_action: bool 
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", tag = "type")]
+pub enum ConsoleEvent {
+    Appended { 
+        lines: Vec<String>,
+        #[serde(default, alias = "frontendAction")]
+        frontend_action: bool 
+    },
+    Cleared { 
+        #[serde(default, alias = "frontendAction")]
+        frontend_action: bool 
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone)]

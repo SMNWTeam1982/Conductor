@@ -1,6 +1,6 @@
 import React from "react";
 import { Draggable } from '@hello-pangea/dnd';
-import { InputDevice } from "@lib/ipc-new";
+import { InputDevice } from "@lib/ipc";
 
 export type JoystickData = {
     name: string;

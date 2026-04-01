@@ -1,6 +1,6 @@
 import React, { FormEvent, type ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { ConsoleMessageType } from "@lib/ipc-new";
+import { ConsoleMessageType } from "@lib/ipc";
 import { ActionButton } from "@components/settings/ActionButton";
 
 type PageState = {
@@ -17,10 +17,11 @@ class SettingsPage extends React.Component<any, PageState> {
 
     async componentDidMount(): Promise<void> {
         const teamNumber = await invoke<number>('get_team_number');
-        const useUSB = await invoke<boolean>('get_usb');
+        const useUSB = await invoke<boolean>('get_usb_conn');
         const gsm = await invoke<string>('get_game_data');
         this.setState({ teamNumber, useUSB, gsm })
     }
+    
 
     render(): ReactNode {
         return (<div className="container text-light">
@@ -63,7 +64,7 @@ class SettingsPage extends React.Component<any, PageState> {
             if (team.length <= 4) this.setState({ teamNumber: parseInt(team) })
         }
         if (this.state.teamNumber) {
-            setTimeout(async () => await invoke('update_team_number', { teamNumber: this.state.teamNumber }), 500)
+            setTimeout(async () => await invoke('set_team_number', { teamNumber: this.state.teamNumber }), 500)
         }
     }
     gsmChangeHandler(inputEvent?: FormEvent<HTMLInputElement>) {
@@ -72,13 +73,13 @@ class SettingsPage extends React.Component<any, PageState> {
             if (data.length <= 3) this.setState({ gsm: data })
         }
         if (this.state.gsm && this.state.gsm.length == 3) {
-            setTimeout(async () => await invoke('update_game_data', { gsm: this.state.gsm }), 500)
+            setTimeout(async () => await invoke('set_game_data', { gsm: this.state.gsm }), 500)
         }
     }
 
     async usbStateChangeHandler() {
         this.setState({ useUSB: !this.state.useUSB })
-        await invoke("use_usb", { value: !this.state.useUSB });
+        await invoke("set_usb_conn", { value: !this.state.useUSB });
         // setTimeout(async () => {
         //     let currentState = await invoke<DriverStationState>("get_robotstate");
         //     console.log(currentState)
@@ -94,13 +95,15 @@ class SettingsPage extends React.Component<any, PageState> {
         switch (action) {
             case ConsoleMessageType.RESTART_CODE:
                 await invoke("restart_code");
+                await invoke("console_action", { action: { type: "append", line: "Restarting Robot Code"} })
                 break;
             case ConsoleMessageType.RESTART_ROBOT:
-                await invoke("restart_roborio");
+                await invoke("restart_rio");
+                await invoke("console_action", { action: { type: "append", line: "Rebooting roboRIO"} })
                 break;
         }
         // await invoke("manage_console", { messageType: ConsoleMessageType.NO_OUTPUT });
-        await invoke("manage_console", { messageType: action });
+        // await invoke("manage_console", { messageType: action });
     }
 }
 

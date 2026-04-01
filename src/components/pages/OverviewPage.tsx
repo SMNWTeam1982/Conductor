@@ -1,68 +1,86 @@
 import React, { type ReactElement } from "react";
-import { listen } from "@tauri-apps/api/event";
+import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { unregisterAll } from "@tauri-apps/plugin-global-shortcut";
-import { DriverStationState, ControlMode, ConsoleMessageType, ConsoleOutput } from "@lib/ipc-new";
+import { DriverStationState, DriveMode } from "@lib/ipc";
 import { successStyle, failStyle } from "@lib/styles";
-import RobotTelemetry from "@components/overview/RobotTelemetry";
-import ModeList from "@components/overview/RobotModes";
-import RobotConsole from "@components/overview/RobotConsole";
+import StatusBadges from "@components/overview/StatusBadges";
+import ModeList from "@components/overview/ModeList";
+import ProgramConsole from "@components/overview/ProgramConsole";
 import RobotControls from "@components/overview/RobotControls";
 import AllianceSelector from "@components/overview/AllianceSelector";
 
 
 
 type PageState = {
-    enabled: boolean | null;
-    estopped: boolean | null;
-    mode: ControlMode | null;
-    driverStationState: DriverStationState | null;
+    enabled: boolean | undefined;
+    estopped: boolean | undefined;
+    driveMode: DriveMode | undefined;
+    driverStationState: DriverStationState | undefined;
+    batteryVoltage: number | null;
     teamNumber: number | null;
 }
 
 class OverviewPage extends React.Component<any, PageState> {
+    private intervalId?: number;
+    private unlisteners: UnlistenFn[] = [];
+    private unmounted = false;
+    private polling = false;
+
     constructor(props: any) {
         super(props);
-        this.state = { enabled: null, estopped: null, mode: null, driverStationState: null, teamNumber: null }
+        this.state = { enabled: undefined, estopped: undefined, driveMode: undefined, driverStationState: undefined, batteryVoltage: null, teamNumber: null }
     }
     async componentDidMount(): Promise<void> {
-        let currentState = await invoke<DriverStationState>('get_ds_state');
-        let currentMode = await invoke<ControlMode>('get_mode');
-        let teamNumber = await invoke<number>('get_team_number');
-        let enabled = await invoke<boolean>('get_enabled');
-        await invoke("manage_console", { messageType: ConsoleMessageType.NO_OUTPUT })
+        this.unmounted = false;
 
-        setInterval(async () => {
-            const prevState = this.state.driverStationState
-            const newState = await invoke<DriverStationState>('get_robotstate');
-            const lastOutput = await invoke<ConsoleOutput>('get_last_console_output')
-            const estopped = await invoke<boolean>('get_estopped');
+        try {
+            const [driveMode, teamNumber] = await Promise.all([
+                invoke<DriveMode>('get_drive_mode'),
+                invoke<number>('get_team_number'),
+            ]);
+            if (!this.unmounted) this.setState({ driveMode, teamNumber })
+        } catch { }
 
-            if (newState.isSimulator && lastOutput.messageType != ConsoleMessageType.SIMULATION_MESSAGE && (lastOutput.messageType == ConsoleMessageType.CLEAR_CONSOLE || (!lastOutput.messageName.includes("ERROR") && lastOutput.messageContent == ""))) {
-                await invoke("manage_console", { messageType: ConsoleMessageType.SIMULATION_MESSAGE })
+        this.intervalId = window.setInterval(async () => {
+            if (this.unmounted || this.polling) return;
+            this.polling = true;
+            try {
+                const [driverStationState, estopped, enabled, batteryVoltage] = await Promise.all([
+                    invoke<DriverStationState>('get_ds_state'),
+                    invoke<boolean>('get_estopped'),
+                    invoke<boolean>('get_enable_status'),
+                    invoke<number>('get_battery_voltage'),
+                ]);
+                if (!this.unmounted) this.setState({ driverStationState, estopped, enabled, batteryVoltage })
+            } catch { }
+            finally {
+                this.polling = false;
             }
-            if (!newState.isSimulator && (lastOutput.messageType == ConsoleMessageType.SIMULATION_MESSAGE)) {
-                await invoke("manage_console", { messageType: ConsoleMessageType.CLEAR_CONSOLE })
-            }
-            if (prevState && !prevState.hasComms && newState.hasComms) {
-                await invoke("manage_console", { messageType: ConsoleMessageType.NO_OUTPUT })
-            }
-            if (prevState && (newState.hasComms != prevState.hasComms || newState.hasCode != prevState.hasCode)) this.setState({ driverStationState: newState });
-            if (this.state.estopped !== estopped) this.setState({ estopped })
-        }, 50)
-        listen<number>('mode', (event) => {
-            this.setState({ mode: event.payload })
-        })
-        listen<boolean>('is-enabled', async (event) => {
-            if (event.payload === false) await unregisterAll();
-            this.setState({ enabled: event.payload })
-        })
-        listen<boolean>('is-estopped', (event) => {
-            this.setState({ estopped: event.payload })
-        })
-        this.setState({ mode: currentMode, driverStationState: currentState, teamNumber, enabled })
+        }, 100);
+
+        this.unlisteners.push(
+            await listen<number>('drive-mode', (event) => {
+                if (this.unmounted) return;
+                this.setState({ driveMode: event.payload })
+            }),
+            await listen<boolean>('enabled-state', async (event) => {
+                if (this.unmounted) return;
+                if (event.payload === false) await unregisterAll();
+                this.setState({ enabled: event.payload });
+            }),
+            await listen<boolean>('estopped-state', (event) => {
+                if (this.unmounted) return;
+                this.setState({ estopped: event.payload })
+            })
+        );
     }
     componentWillUnmount(): void {
+        this.unmounted = true;
+        if (this.intervalId !== undefined) window.clearInterval(this.intervalId);
+        this.intervalId = undefined;
+        this.unlisteners.forEach((fn) => fn());
+        this.unlisteners = [];
     }
 
     render(): React.ReactNode {
@@ -74,7 +92,7 @@ class OverviewPage extends React.Component<any, PageState> {
                     </div>
 
                     <div className="col-3 user-select-none">
-                        <RobotTelemetry driverStationState={this.state.driverStationState} />
+                        <StatusBadges driverStationState={this.state.driverStationState} />
                     </div>
 
                     <div className="col-2 user-select-none">
@@ -86,27 +104,27 @@ class OverviewPage extends React.Component<any, PageState> {
                                 <p><b>Battery</b></p>
                                 <p className={`col-1 ${this.getVoltageClass()} w-50`}>
                                     <b>
-                                        {this.state.driverStationState?.batteryVoltage
-                                            ? this.state.driverStationState.batteryVoltage.toFixed(2) + "V"
+                                        {this.state?.batteryVoltage
+                                            ? this.state.batteryVoltage.toFixed(2) + "V"
                                             : "N/A"}
                                     </b>
                                 </p>
                                 <p className={`col-4 ${this.getVoltageClass()} w-50`}>
                                     <b>
-                                        {this.state.driverStationState?.batteryVoltage ?
-                                            ((this.state.driverStationState.batteryVoltage / 12) * 100).toFixed(1) + "%" : ''}
+                                        {this.state?.batteryVoltage ?
+                                            ((this.state.batteryVoltage / 12) * 100).toFixed(1) + "%" : ''}
                                     </b>
                                 </p>
                             </div>
                         </div>
                     </div>
                     <div className="col">
-                        <RobotConsole window="main" enabled={this.state.enabled} />
+                        <ProgramConsole window="main" />
                     </div>
                 </div>
                 <div className="row user-select-none" style={{ marginTop: "-50px" }}>
                     <div className="col-3 text-center mt-4">
-                        <RobotControls enabled={this.state.enabled} estopped={this.state.estopped} />
+                        <RobotControls driverStationState={this.state.driverStationState} enabled={this.state.enabled} estopped={this.state.estopped} />
                     </div>
                     <div className="col-3 mt-4 user-select-none">
                         <AllianceSelector />
@@ -124,8 +142,8 @@ class OverviewPage extends React.Component<any, PageState> {
                         <div className="row row-cols-2">
                             {this.getSimulatorState()}
                             <button className="btn btn-secondary text-light w-auto ms-0 my-2"
-                            style={{ marginRight: "2.5rem" }}
-                            onClick={async () => await invoke("create_console_window")}>                            
+                                style={{ marginRight: "2.5rem" }}
+                                onClick={async () => await invoke("create_console_window")}>
                                 <i className="bi bi-box-arrow-down-right"></i>
                             </button>
                         </div>
@@ -135,7 +153,7 @@ class OverviewPage extends React.Component<any, PageState> {
         )
     }
     getVoltageClass(): string {
-        const voltage = this.state.driverStationState?.batteryVoltage;
+        const voltage = this.state?.batteryVoltage || 0;
         if (voltage === undefined || voltage == 0) {
             return "text-secondary w-100";
         }
@@ -148,12 +166,12 @@ class OverviewPage extends React.Component<any, PageState> {
         if (this.state.estopped === true) { return "Emergency Stopped" } else
             if (this.state.driverStationState?.hasCode === true) {
                 if (this.state.enabled === true) {
-                    return this.state.mode !== null && this.state.mode !== undefined
-                        ? ControlMode[this.state.mode] + "\nEnabled"
+                    return this.state.driveMode !== null && this.state.driveMode !== undefined
+                        ? DriveMode[this.state.driveMode] + "\nEnabled"
                         : "Unknown Mode\nEnabled";
                 } else
-                    return this.state.mode !== null && this.state.mode !== undefined
-                        ? ControlMode[this.state.mode] + "\nDisabled"
+                    return this.state.driveMode !== null && this.state.driveMode !== undefined
+                        ? DriveMode[this.state.driveMode] + "\nDisabled"
                         : "Unknown Mode\nDisabled";
             } else if (!this.state.driverStationState?.hasCode && this.state.driverStationState?.hasComms) { return "No Robot Code" } else
                 return "No Robot Communication"

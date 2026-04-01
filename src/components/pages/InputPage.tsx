@@ -2,7 +2,7 @@ import React from "react";
 import { DragDropContext, Droppable, type DropResult } from '@hello-pangea/dnd';
 import { InputItem } from "@components/input/InputItem";
 import { InputTester } from "@components/input/inputTester";
-import { InputState } from "@lib/ipc-new";
+import { InputState } from "@lib/ipc";
 // import { invoke } from "@tauri-apps/api/core";
 // import { listen } from "@tauri-apps/api/event";
 

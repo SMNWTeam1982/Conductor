@@ -1,6 +1,6 @@
 import React from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { ActivePage } from "@lib/ipc-new";
+import { ActivePage } from "@lib/ipc";
 import OverviewPage from "@components/pages/OverviewPage";
 import SettingsPage from "@components/pages/SettingsPage";
 import InputPage from "@components/pages/InputPage";
@@ -20,6 +20,7 @@ class App extends React.Component<any, AppState> {
   };
 
   async componentDidMount(): Promise<void> {
+    await invoke("console_init");
     let activePage = await invoke<number>("get_active_page");
     this.setState({ activePage })
   }

@@ -1,4 +1,4 @@
-import { ConsoleMessageType } from "@lib/ipc-new";
+import { ConsoleMessageType } from "@lib/ipc";
 import React from "react";
 
 type ComponentProps = {
@@ -47,7 +47,7 @@ export class ActionButton extends React.Component<ComponentProps, ComponentState
     }
     render(): React.ReactNode {
         return (<button type="button" className={`btn m-2 ${(this.state.isSelected || this.state.isClicked) ? this.selectedStyle : this.unselectedStyle}`}
-            onClick={() => this.handleClick()}
+            onMouseDown={() => void this.handleClick()}
             onMouseOver={() => this.setState({ isSelected: true })}
             onMouseOut={() => this.setState({ isSelected: false })}>
             <div className="row row-cols-2">

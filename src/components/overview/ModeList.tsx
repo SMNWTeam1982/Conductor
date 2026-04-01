@@ -13,15 +13,16 @@ class ModeList extends React.Component<any, ComponentState> {
         this.state = { mode: null };
     }
     async componentDidMount(): Promise<void> {
-        this.setState({ mode: await invoke('get_mode') })
-        listen<number>('mode', (event) => {
+        this.setState({ mode: await invoke('get_drive_mode') })
+        listen<number>('drive-mode', (event) => {
             this.setState({ mode: event.payload });
         })
     }
 
     async handleClick(event: React.MouseEvent<HTMLButtonElement>, mode: Mode) {
-        await invoke('set_mode', { mode: mode });
-        event.currentTarget.blur();
+        const button = event.currentTarget
+        await invoke('set_drive_mode', { mode: mode });
+        button.blur();
     }
 
     modeItem(mode: Mode): React.ReactElement {
